@@ -1,66 +1,51 @@
 package com.example.text_classification
 
 import android.os.Bundle
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import android.widget.TextView
-import android.widget.Button
-import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
-import com.google.mediapipe.tasks.core.BaseOptions
-import com.google.mediapipe.tasks.text.textclassifier.TextClassifier
-import kotlinx.coroutines.Dispatchers
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.text_classification.data.api.NewsApiService
+import com.example.text_classification.data.sentimentanalysis.SentimentAnalyzer
+import com.example.text_classification.databinding.ActivityMainBinding
+import com.example.text_classification.ui.NewsSimpleAdapter
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 
 class MainActivity : AppCompatActivity() {
-    private val currentModel = "average_word_classifier.tflite"
-    private val baseOptionsBuilder = BaseOptions.builder()
-        .setModelAssetPath(currentModel)
-    private val baseOptions = baseOptionsBuilder.build()
-    private val optionsBuilder = TextClassifier.TextClassifierOptions.builder()
-        .setBaseOptions(baseOptions)
-    private val options = optionsBuilder.build()
-
-    private var textClassifier: TextClassifier? = null
-
-    private lateinit var textView: TextView
-    private lateinit var button: Button
+    private lateinit var binding: ActivityMainBinding
+    private lateinit var adapter: NewsSimpleAdapter
+    private lateinit var analyzer: SentimentAnalyzer
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        analyzer = SentimentAnalyzer(this)
+        adapter = NewsSimpleAdapter(analyzer)
+        binding.recyclerView.layoutManager = LinearLayoutManager(this)
+        binding.recyclerView.adapter = adapter
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
 
-        textView = findViewById(R.id.textview)
-        button = findViewById(R.id.btn)
+        val api = Retrofit.Builder()
+            .baseUrl("https://newsapi.org/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(NewsApiService::class.java)
 
-        textClassifier = TextClassifier.createFromOptions(this, options)
-
-        button.setOnClickListener {
-            lifecycleScope.launch {
-                withContext(Dispatchers.IO) {
-                    val results = textClassifier?.classify("shutup")
-                    withContext(Dispatchers.Main) {
-                        val data = results?.classificationResult()?.classifications()
-                        if (data?.isNotEmpty() == true) {
-                            val categories = data[0].categories()
-                            if (categories.isNotEmpty()) {
-                                val name = "${categories[0].categoryName()} ${categories[0].displayName()}"
-                                println(name)
-                                textView.text = name
-                            }
-                        }
-                    }
-                }
+        lifecycleScope.launch {
+            try {
+                val response = api.getEverything(
+                    query = "apple",
+                    from = "2025-03-25",
+                    sortBy = "publishedAt",
+                    page=1,
+                    apiKey = "0db8aaefe18a476b86f1970327cfe251"
+                )
+                adapter.submitList(response.articles)
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }

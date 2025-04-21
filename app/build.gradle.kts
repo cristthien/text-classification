@@ -33,6 +33,9 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+    buildFeatures {
+        viewBinding = true
+    }
 }
 
 dependencies {
@@ -46,4 +49,13 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     implementation(libs.tasks.text)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.gson)
+    implementation(libs.paging.runtime)
+    implementation(libs.coroutines.android)
+    implementation(libs.lifecycle.viewmodel)
+    implementation(libs.lifecycle.livedata)
+    implementation(libs.glide)
+    implementation(libs.tflite)
+    implementation(libs.tflite.support)
 }
